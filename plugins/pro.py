@@ -76,14 +76,14 @@ async def Pro(bot: AFK, m: Message):
 
             if os.path.isfile(dl_file) is not None:
                 if dl_file.endswith(".mp4"):
-                    cap = f"**{caption_name}‎** ‎ ʙɪꜱʜɴᴏɪ.mp4\n\n 𝗕ᴀᴛᴄʜ »  {caption}\n\n𝗗ᴏᴡɴʟᴏᴀᴅ Bʏ ➤ 🅂ʙɪꜱʜɴᴏɪ 🥷\n
+                    cap = f"<b>{caption_name}‎<b> ‎ ʙɪꜱʜɴᴏɪ.mp4\n\n 𝗕ᴀᴛᴄʜ »  {caption}\n\n𝗗ᴏᴡɴʟᴏᴀᴅ Bʏ ➤ 🅂ʙɪꜱʜɴᴏɪ 🥷\n
 ‎ ‎ ‎ @thebishnoi29_bot"
                     UL = Upload_to_Tg(bot=bot, m=m, file_path=dl_file, name=caption_name,
                                       Thumb=Thumb, path=sPath, show_msg=Show, caption=cap)
                     await UL.upload_video()
                 else:
                     ext = dl_file.split(".")[-1]
-                    cap = f"**{caption_name}‎** ‎ ʙɪꜱʜɴᴏɪ\n\n 𝗕ᴀᴛᴄʜ »  {caption}\n\n𝗗ᴏᴡɴʟᴏᴀᴅ Bʏ ➤ 🅂ʙɪꜱʜɴᴏɪ 🥷\n
+                    cap = f"<b>{caption_name}‎<b> ‎ ʙɪꜱʜɴᴏɪ\n\n 𝗕ᴀᴛᴄʜ »  {caption}\n\n𝗗ᴏᴡɴʟᴏᴀᴅ Bʏ ➤ 🅂ʙɪꜱʜɴᴏɪ 🥷\n
 ‎ ‎ ‎ @thebishnoi29_bot"
                     UL = Upload_to_Tg(bot=bot, m=m, file_path=dl_file, name=caption_name,
                                       Thumb=Thumb, path=sPath, show_msg=Show, caption=cap)
