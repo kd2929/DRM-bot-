@@ -82,7 +82,7 @@ async def Pro(bot: AFK, m: Message):
                     await UL.upload_video()
                 else:
                     ext = dl_file.split(".")[-1]
-                    cap = f"{caption_name}‎ ʙɪꜱʜɴᴏɪ\n\n𝗕ᴀᴛᴄʜ » {caption}\n\n𝗗ᴏᴡɴʟᴏᴀᴅ Bʏ ➤ 🅂ʙɪꜱʜɴᴏɪ 🥷\n@thebishnoi29_bot"
+                    cap = f"{caption_name}‎.{ext}\n\n𝗕ᴀᴛᴄʜ » {caption}\n\n𝗗ᴏᴡɴʟᴏᴀᴅ Bʏ ➤ 🅂ʙɪꜱʜɴᴏɪ 🥷\n@thebishnoi29_bot"
                     UL = Upload_to_Tg(bot=bot, m=m, file_path=dl_file, name=caption_name,
                                       Thumb=Thumb, path=sPath, show_msg=Show, caption=cap)
                     await UL.upload_doc()
