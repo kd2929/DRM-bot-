@@ -69,8 +69,8 @@ async def drm(bot: ace, m: Message):
         PDF = downloadPdf(title=Book_Name, imagelist=IMG_LIST)
     except Exception as e1:
         await m.reply_text(str(e1))
-    Thumb = "hb" 
-   UL = Upload_to_Tg(bot=bot, m=m, file_path=PDF, name=Book_Name)
+    Thumb = "hb"
+    UL = Upload_to_Tg(bot=bot, m=m, file_path=PDF, name=Book_Name,
                         Thumb=Thumb, path=path, show_msg=Show, caption=Book_Name)
     await UL.upload_doc()
     print("Done")
