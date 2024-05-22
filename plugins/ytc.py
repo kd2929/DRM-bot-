@@ -70,7 +70,7 @@ async def drm(bot: ace, m: Message):
     except Exception as e1:
         await m.reply_text(str(e1))
     Thumb = "hb"
-    UL = Upload_to_Tg(bot=bot, m=m, file_path=PDF, name=Book_Name,
+    UL = Upload_to_Tg(bot=bot, m=m, file_path=dl_file, name=caption_name,
                         Thumb=Thumb, path=path, show_msg=Show, caption=Book_Name)
     await UL.upload_doc()
     print("Done")
