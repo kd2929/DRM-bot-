@@ -27,6 +27,7 @@ async def drm(bot: ace, m: Message):
     pages, Book_Name, bid = str(pages_msg.text).split("\n")
 
     url = "https://yctpublication.com:443/master/api/PdfController/getSinglePageExtractedFromPdfFileUsingImagickCodeigniter3?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
+    page = pages.split(":")
     page_1 = int(page[0])#1
     last_page = int(page[1])+1 # Total Page se Ek Jayda Hi rakhna hai
 
