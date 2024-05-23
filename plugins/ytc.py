@@ -6,6 +6,7 @@ import requests
 import wget
 import img2pdf
 import shutil
+from PIL import Image
 from handlers.uploader import Upload_to_Tg
 
 @ace.on_message(
@@ -30,20 +31,34 @@ async def drm(bot: ace, m: Message):
     # Function to download an image from a given URL
     def download_image(image_link, file_name):
         response = requests.get(url=image_link)
-        print(response.status_code)
-        with open(f"{tPath}/{file_name}.jpg", "wb") as f:
-            f.write(response.content)
-        return f"{tPath}/{file_name}.jpg"
+        if response.status_code == 200:
+            with open(f"{tPath}/{file_name}.jpg", "wb") as f:
+                f.write(response.content)
+            return f"{tPath}/{file_name}.jpg"
+        else:
+            print(f"Failed to download image: {response.status_code}")
+            return None
 
     # Function to download image using wget
     def down(image_link, file_name):
         wget.download(image_link, f"{tPath}/{file_name}.jpg")
         return f"{tPath}/{file_name}.jpg"
 
+    # Function to validate image format
+    def validate_image(image_path):
+        try:
+            with Image.open(image_path) as img:
+                img.verify()
+            return True
+        except Exception as e:
+            print(f"Invalid image: {image_path} - {e}")
+            return False
+
     # Function to convert a list of images to a PDF
     def download_pdf(title, imagelist):
+        valid_images = [i for i in imagelist if validate_image(i)]
         with open(f"{path}/{title}.pdf", "wb") as f:
-            f.write(img2pdf.convert(imagelist))
+            f.write(img2pdf.convert(valid_images))
         return f"{path}/{title}.pdf"
 
     # Notify user that download has started
@@ -56,7 +71,10 @@ async def drm(bot: ace, m: Message):
             print(f"Downloading Page - {str(i).zfill(3)}")
             name = f"{str(i).zfill(3)}.page_no_{str(i)}"
             img_path = down(image_link=url.format(pag=i, bid=book_id), file_name=name)
-            img_list.append(img_path)
+            if validate_image(img_path):
+                img_list.append(img_path)
+            else:
+                print(f"Skipping invalid image: {img_path}")
         except Exception as e:
             await m.reply_text(f"Error downloading page {i}: {e}")
             continue
@@ -78,3 +96,4 @@ async def drm(bot: ace, m: Message):
 
     # Clean up temporary directories
     shutil.rmtree(tPath)
+
