@@ -1,12 +1,12 @@
 from pyrogram import filters, Client as ace
+from main import LOGGER as LOGS, prefixes
 from pyrogram.types import Message
-from main import LOGGER as LOGS, prefixes, Config
+from main import Config
 import os
 import requests
+import wget
 import img2pdf
 import shutil
-from PIL import Image
-from handlers.uploader import Upload_to_Tg
 
 @ace.on_message(
     (filters.chat(Config.GROUPS) | filters.chat(Config.AUTH_USERS)) &
@@ -18,79 +18,63 @@ async def drm(bot: ace, m: Message):
     os.makedirs(path, exist_ok=True)
     os.makedirs(tPath, exist_ok=True)
 
-    # Ask user for pages range, book name, and book ID
     pages_msg = await bot.ask(m.chat.id, "Send Pages Range Eg: '1:100'\nBook Name\nBookId")
-    pages, book_name, book_id = str(pages_msg.text).split("\n")
+    pages, Book_Name, bid = str(pages_msg.text).split("\n")
 
-    url = "https://yctpublication.com:443/master/api/PdfController/getSinglePageExtractedFromPdfFileUsingImagickCodeigniter3?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
+    base_url = "http://yctpublication.com/master/api/MasterController/getPdfPage?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
+    page = pages.split(":")
+    page_1 = int(page[0])
+    last_page = int(page[1]) + 1
 
-    page_start, page_end = map(int, pages.split(":"))
-    page_end += 1  # Increase the end page by 1 to include the last page in the range
-
-    # Function to download an image from a given URL
     def download_image(image_link, file_name):
-        response = requests.get(url=image_link)
-        if response.status_code == 200 and 'image' in response.headers.get('Content-Type', ''):
+        k = requests.get(url=image_link)
+        if k.status_code == 200:
             with open(f"{tPath}/{file_name}.jpg", "wb") as f:
-                f.write(response.content)
+                f.write(k.content)
             return f"{tPath}/{file_name}.jpg"
         else:
-            print(f"Failed to download image or invalid content type: {response.status_code}, {response.headers.get('Content-Type', '')}")
-            return None
+            raise Exception(f"Failed to download image: {k.status_code}")
 
-    # Function to validate image format
-    def validate_image(image_path):
+    def down(image_link, file_name):
         try:
-            with Image.open(image_path) as img:
-                img.verify()
-            return True
+            wget.download(image_link, f"{tPath}/{file_name}.jpg")
+            return f"{tPath}/{file_name}.jpg"
         except Exception as e:
-            print(f"Invalid image: {image_path} - {e}")
-            return False
+            raise Exception(f"Failed to download image with wget: {str(e)}")
 
-    # Function to convert a list of images to a PDF
     def download_pdf(title, imagelist):
-        if not imagelist:
-            raise ValueError("No valid images to convert to PDF.")
-        valid_images = [i for i in imagelist if validate_image(i)]
-        if not valid_images:
-            raise ValueError("All images are invalid.")
-        with open(f"{path}/{title}.pdf", "wb") as f:
-            f.write(img2pdf.convert(valid_images))
-        return f"{path}/{title}.pdf"
+        pdf_path = f"{path}/{title}.pdf"
+        with open(pdf_path, "wb") as f:
+            f.write(img2pdf.convert([i for i in imagelist]))
+        return pdf_path
 
-    # Notify user that download has started
-    show_msg = await bot.send_message(m.chat.id, "Downloading")
+    show = await bot.send_message(
+        m.chat.id,
+        "Downloading"
+    )
     img_list = []
 
-    # Download each page within the specified range
-    for i in range(page_start, page_end):
+    for i in range(page_1, last_page):
         try:
             print(f"Downloading Page - {str(i).zfill(3)}")
             name = f"{str(i).zfill(3)}.page_no_{str(i)}"
-            img_path = download_image(image_link=url.format(pag=i, bid=book_id), file_name=name)
-            if img_path and validate_image(img_path):
-                img_list.append(img_path)
-            else:
-                print(f"Skipping invalid or failed download image: {img_path}")
+            image_url = base_url.format(pag=i, bid=bid)
+            y = down(image_link=image_url, file_name=name)
+            img_list.append(y)
         except Exception as e:
-            await m.reply_text(f"Error downloading page {i}: {e}")
+            await m.reply_text(str(e))
             continue
 
     try:
-        # Create PDF from downloaded images
-        pdf_path = download_pdf(title=book_name, imagelist=img_list)
+        pdf_path = download_pdf(title=Book_Name, imagelist=img_list)
     except Exception as e1:
-        await m.reply_text(f"Error creating PDF: {e1}")
+        await m.reply_text(str(e1))
         return
 
-    # Upload PDF to Telegram
-    ul = Upload_to_Tg(
-        bot=bot, m=m, file_path=pdf_path, name=book_name,
-        Thumb="hb", path=path, show_msg=show_msg, caption=book_name
-    )
-    await ul.upload_doc()
-    print("Upload Done")
-
-    # Clean up temporary directories
+    thumb = "hb"  # Assuming you have a thumbnail image path or you can set it to None
+    UL = Upload_to_Tg(bot=bot, m=m, file_path=pdf_path, name=Book_Name,
+                      Thumb=thumb, path=path, show_msg=show, caption=Book_Name)
+    await UL.upload_doc()
+    
+    print("Done")
     shutil.rmtree(tPath)
