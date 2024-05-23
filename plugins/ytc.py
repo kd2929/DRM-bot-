@@ -74,11 +74,11 @@ async def drm(bot: ace, m: Message):
         try:
             print(f"Downloading Page - {str(i).zfill(3)}")
             name = f"{str(i).zfill(3)}.page_no_{str(i)}"
-            img_path = down(image_link=url.format(pag=i, bid=book_id), file_name=name)
-            if validate_image(img_path):
+            img_path = download_image(image_link=url.format(pag=i, bid=book_id), file_name=name)
+            if img_path and validate_image(img_path):
                 img_list.append(img_path)
             else:
-                print(f"Skipping invalid image: {img_path}")
+                print(f"Skipping invalid or failed download image: {img_path}")
         except Exception as e:
             await m.reply_text(f"Error downloading page {i}: {e}")
             continue
