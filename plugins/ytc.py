@@ -1,17 +1,12 @@
 from pyrogram import filters, Client as ace
-from main import LOGGER as LOGS, prefixes
 from pyrogram.types import Message
-from main import Config
+from main import LOGGER as LOGS, prefixes, Config
 import os
-import subprocess
-import tgcrypto
-import shutil
-import sys
-from handlers.uploader import Upload_to_Tg
-from handlers.tg import TgClient
 import requests
 import wget
 import img2pdf
+import shutil
+from handlers.uploader import Upload_to_Tg
 
 @ace.on_message(
     (filters.chat(Config.GROUPS) | filters.chat(Config.AUTH_USERS)) &
@@ -23,55 +18,63 @@ async def drm(bot: ace, m: Message):
     os.makedirs(path, exist_ok=True)
     os.makedirs(tPath, exist_ok=True)
 
+    # Ask user for pages range, book name, and book ID
     pages_msg = await bot.ask(m.chat.id, "Send Pages Range Eg: '1:100'\nBook Name\nBookId")
-    pages, Book_Name, bid = str(pages_msg.text).split("\n")
+    pages, book_name, book_id = str(pages_msg.text).split("\n")
 
     url = "https://yctpublication.com:443/master/api/PdfController/getSinglePageExtractedFromPdfFileUsingImagickCodeigniter3?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
-    page = pages.split(":")
-    page_1 = int(page[0])#1
-    last_page = int(page[1])+1 # Total Page se Ek Jayda Hi rakhna hai
 
+    page_start, page_end = map(int, pages.split(":"))
+    page_end += 1  # Increase the end page by 1 to include the last page in the range
+
+    # Function to download an image from a given URL
     def download_image(image_link, file_name):
-        k = requests.get(url=image_link)
-        print(k.status_code)
+        response = requests.get(url=image_link)
+        print(response.status_code)
         with open(f"{tPath}/{file_name}.jpg", "wb") as f:
-            f.write(k.content)
+            f.write(response.content)
         return f"{tPath}/{file_name}.jpg"
 
+    # Function to download image using wget
     def down(image_link, file_name):
         wget.download(image_link, f"{tPath}/{file_name}.jpg")
         return f"{tPath}/{file_name}.jpg"
 
-
-    def downloadPdf(title, imagelist):
+    # Function to convert a list of images to a PDF
+    def download_pdf(title, imagelist):
         with open(f"{path}/{title}.pdf", "wb") as f:
-            f.write(img2pdf.convert([i for i in imagelist]))
-        PDF = f"{path}/{title}.pdf"
-        return PDF
+            f.write(img2pdf.convert(imagelist))
+        return f"{path}/{title}.pdf"
 
-    Show =  await bot.send_message(
-        m.chat.id,
-        "Downloading"
-    )
-    IMG_LIST = []
+    # Notify user that download has started
+    show_msg = await bot.send_message(m.chat.id, "Downloading")
+    img_list = []
 
-    for i in range(page_1, last_page):
-        # print(url.format(i))
+    # Download each page within the specified range
+    for i in range(page_start, page_end):
         try:
             print(f"Downloading Page - {str(i).zfill(3)}")
-            name = f"{str(i).zfill(3)}. page_no_{str(i)}"
-            y = down(image_link=url.format(pag = i, bid= bid), file_name=name)
-            IMG_LIST.append(y)
+            name = f"{str(i).zfill(3)}.page_no_{str(i)}"
+            img_path = down(image_link=url.format(pag=i, bid=book_id), file_name=name)
+            img_list.append(img_path)
         except Exception as e:
-            await m.reply_text(str(e))
+            await m.reply_text(f"Error downloading page {i}: {e}")
             continue
+
     try:
-        PDF = downloadPdf(title=Book_Name, imagelist=IMG_LIST)
+        # Create PDF from downloaded images
+        pdf_path = download_pdf(title=book_name, imagelist=img_list)
     except Exception as e1:
-        await m.reply_text(str(e1))
-    Thumb = "hb"
-    UL = Upload_to_Tg(bot=bot, m=m, file_path=PDF, name=Book_Name,
-    await UL.upload_doc()
-    print("Done")
+        await m.reply_text(f"Error creating PDF: {e1}")
+        return
+
+    # Upload PDF to Telegram
+    ul = Upload_to_Tg(
+        bot=bot, m=m, file_path=pdf_path, name=book_name,
+        Thumb="hb", path=path, show_msg=show_msg, caption=book_name
+    )
+    await ul.upload_doc()
+    print("Upload Done")
+
+    # Clean up temporary directories
     shutil.rmtree(tPath)
-    
