@@ -56,7 +56,11 @@ async def drm(bot: ace, m: Message):
 
     # Function to convert a list of images to a PDF
     def download_pdf(title, imagelist):
+        if not imagelist:
+            raise ValueError("No valid images to convert to PDF.")
         valid_images = [i for i in imagelist if validate_image(i)]
+        if not valid_images:
+            raise ValueError("All images are invalid.")
         with open(f"{path}/{title}.pdf", "wb") as f:
             f.write(img2pdf.convert(valid_images))
         return f"{path}/{title}.pdf"
@@ -96,4 +100,3 @@ async def drm(bot: ace, m: Message):
 
     # Clean up temporary directories
     shutil.rmtree(tPath)
-
