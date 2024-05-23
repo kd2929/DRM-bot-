@@ -4,9 +4,9 @@ from pyrogram.types import Message
 from main import Config
 import os
 import requests
-import wget
-import img2pdf
 import shutil
+from PIL import Image
+from io import BytesIO
 
 @ace.on_message(
     (filters.chat(Config.GROUPS) | filters.chat(Config.AUTH_USERS)) &
@@ -21,32 +21,23 @@ async def drm(bot: ace, m: Message):
     pages_msg = await bot.ask(m.chat.id, "Send Pages Range Eg: '1:100'\nBook Name\nBookId")
     pages, Book_Name, bid = str(pages_msg.text).split("\n")
 
-    base_url = "https://yctpublication.com:443/master/api/PdfController/getSinglePageExtractedFromPdfFileUsingImagickCodeigniter3?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
+    base_url = "http://yctpublication.com:443/master/api/MasterController/getPdfPage?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
     page = pages.split(":")
     page_1 = int(page[0])
     last_page = int(page[1]) + 1
 
     def download_image(image_link, file_name):
-        k = requests.get(url=image_link)
-        if k.status_code == 200:
-            with open(f"{tPath}/{file_name}.jpg", "wb") as f:
-                f.write(k.content)
-            return f"{tPath}/{file_name}.jpg"
-        else:
-            raise Exception(f"Failed to download image: {k.status_code}")
-
-    def down(image_link, file_name):
         try:
-            wget.download(image_link, f"{tPath}/{file_name}.jpg")
-            return f"{tPath}/{file_name}.jpg"
-        except Exception as e:
-            raise Exception(f"Failed to download image with wget: {str(e)}")
-
-    def download_pdf(title, imagelist):
-        pdf_path = f"{path}/{title}.pdf"
-        with open(pdf_path, "wb") as f:
-            f.write(img2pdf.convert([i for i in imagelist]))
-        return pdf_path
+            response = requests.get(url=image_link)
+            response.raise_for_status()  # Check if the request was successful
+            if 'image' in response.headers.get('Content-Type', ''):
+                with open(f"{tPath}/{file_name}.jpg", "wb") as f:
+                    f.write(response.content)
+                return f"{tPath}/{file_name}.jpg"
+            else:
+                raise Exception("The response is not an image.")
+        except requests.RequestException as e:
+            raise Exception(f"Failed to download image: {str(e)}")
 
     show = await bot.send_message(
         m.chat.id,
@@ -59,22 +50,30 @@ async def drm(bot: ace, m: Message):
             print(f"Downloading Page - {str(i).zfill(3)}")
             name = f"{str(i).zfill(3)}.page_no_{str(i)}"
             image_url = base_url.format(pag=i, bid=bid)
-            y = down(image_link=image_url, file_name=name)
-            img_list.append(y)
+            image_path = download_image(image_link=image_url, file_name=name)
+            
+            # Validate the downloaded image
+            try:
+                with Image.open(image_path) as img:
+                    img.verify()  # Verify that it is an image
+                img_list.append(image_path)
+            except (IOError, SyntaxError) as e:
+                print(f"Invalid image file: {image_path}, {str(e)}")
+                os.remove(image_path)  # Remove invalid image file
         except Exception as e:
             await m.reply_text(str(e))
             continue
 
-    try:
-        pdf_path = download_pdf(title=Book_Name, imagelist=img_list)
-    except Exception as e1:
-        await m.reply_text(str(e1))
+    if not img_list:
+        await m.reply_text("No valid images were downloaded.")
         return
 
-    thumb = "hb"  # Assuming you have a thumbnail image path or you can set it to None
-    UL = Upload_to_Tg(bot=bot, m=m, file_path=pdf_path, name=Book_Name,
-                      Thumb=thumb, path=path, show_msg=show, caption=Book_Name)
-    await UL.upload_doc()
-    
+    for img_path in img_list:
+        try:
+            await bot.send_photo(m.chat.id, photo=img_path, caption=Book_Name)
+        except Exception as e:
+            await m.reply_text(f"Failed to send image: {str(e)}")
+
+    await show.delete()
     print("Done")
     shutil.rmtree(tPath)
