@@ -21,7 +21,7 @@ async def drm(bot: ace, m: Message):
     pages_msg = await bot.ask(m.chat.id, "Send Pages Range Eg: '1:100'\nBook Name\nBookId")
     pages, Book_Name, bid = str(pages_msg.text).split("\n")
 
-    base_url = "http://yctpublication.com:443/master/api/MasterController/getPdfPage?book_id={bid}&page_no={pag}&user_id=14593&token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkZjFmOTQ1ZmY5MDZhZWFlZmE5M2MyNzY5OGRiNDA2ZDYwNmIwZTgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMjkwMDE2MzYyNTQtZWZjcDlqYm4wMzJzbmpmc"
+    base_url = "https://yctpublication.com/master/api/MasterController/booklist"
     page = pages.split(":")
     page_1 = int(page[0])
     last_page = int(page[1]) + 1
