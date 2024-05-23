@@ -3,7 +3,6 @@ from pyrogram.types import Message
 from main import LOGGER as LOGS, prefixes, Config
 import os
 import requests
-import wget
 import img2pdf
 import shutil
 from PIL import Image
@@ -31,18 +30,13 @@ async def drm(bot: ace, m: Message):
     # Function to download an image from a given URL
     def download_image(image_link, file_name):
         response = requests.get(url=image_link)
-        if response.status_code == 200:
+        if response.status_code == 200 and 'image' in response.headers.get('Content-Type', ''):
             with open(f"{tPath}/{file_name}.jpg", "wb") as f:
                 f.write(response.content)
             return f"{tPath}/{file_name}.jpg"
         else:
-            print(f"Failed to download image: {response.status_code}")
+            print(f"Failed to download image or invalid content type: {response.status_code}, {response.headers.get('Content-Type', '')}")
             return None
-
-    # Function to download image using wget
-    def down(image_link, file_name):
-        wget.download(image_link, f"{tPath}/{file_name}.jpg")
-        return f"{tPath}/{file_name}.jpg"
 
     # Function to validate image format
     def validate_image(image_path):
